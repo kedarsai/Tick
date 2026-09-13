@@ -1,0 +1,195 @@
+/* The suite dock: a slim bar clinging to the top of the screen. The window is
+   wider than the bar so it can be centred with transparent room either side;
+   only the drawn pixels take the mouse. */
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: var(--font);
+  user-select: none;
+  cursor: default;
+}
+
+#stage {
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 6px;
+}
+
+.solid { pointer-events: auto; }
+
+/* ------------------------------------------------------------------- bar */
+#bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px 6px 5px;
+  background: var(--paper);
+  border: var(--line);
+  border-radius: 999px;
+  box-shadow: var(--shadow-lift);
+  transform-origin: top center;
+  animation: barIn .32s var(--ease-pop);
+}
+body[data-collapsed="true"] #bar { display: none; }
+
+@keyframes barIn {
+  0% { opacity: 0; transform: translateY(-16px) scale(.9); }
+  100% { opacity: 1; transform: none; }
+}
+
+.bar__grip {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 6px 0 4px;
+  cursor: grab;
+}
+.bar__grip span {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+.bar__grip:hover span { background: var(--ink); }
+body[data-dragging="true"] .bar__grip { cursor: grabbing; }
+
+.bar__apps { display: flex; align-items: center; gap: 2px; }
+
+.appBtn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background .15s, color .15s, transform .18s var(--ease-pop);
+}
+.appBtn .ico { width: 21px; height: 21px; }
+.appBtn:hover {
+  background: var(--cream);
+  color: var(--app-accent, var(--ink));
+  transform: translateY(-2px);
+}
+.appBtn:active { transform: translateY(1px); }
+
+/* companions open their own window: a little hop says "on its way" */
+.appBtn--companion.is-launching { animation: launchHop .5s var(--ease-pop); }
+@keyframes launchHop {
+  0% { transform: translateY(0); }
+  35% { transform: translateY(-6px) rotate(-8deg); color: var(--app-accent); }
+  100% { transform: translateY(0); }
+}
+
+/* a little name tag under the icon on hover */
+.appBtn::after {
+  content: attr(data-name);
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  font-family: var(--font-stamp);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  font-size: 9px;
+  color: var(--paper);
+  background: var(--ink);
+  border-radius: 999px;
+  padding: 3px 9px 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .14s, transform .16s var(--ease-pop);
+}
+.appBtn:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.bar__sep {
+  width: 2px;
+  height: 22px;
+  border-radius: 2px;
+  background: rgba(58, 38, 28, .16);
+  margin: 0 4px;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 12px;
+  border: var(--line-thin);
+  border-radius: 999px;
+  background: var(--cream);
+  cursor: pointer;
+  transition: background .15s, transform .16s var(--ease-pop);
+}
+.chip:hover { background: var(--paper-dim); transform: translateY(-1px); }
+.chip__dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--ink-faint);
+  transition: background .2s;
+}
+body[data-running="true"] .chip__dot { background: var(--chip-accent, var(--orange)); animation: chipBlip 1.4s ease-in-out infinite; }
+@keyframes chipBlip { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+.chip__time {
+  font-family: var(--font-digit);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.bar__btn {
+  width: 30px; height: 30px;
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.bar__btn:hover { background: var(--cream); color: var(--ink); }
+
+/* ------------------------------------------------------------ collapsed */
+#tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 13px 6px;
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: 0 0 14px 14px;
+  box-shadow: 0 3px 0 rgba(58, 38, 28, .3);
+  cursor: pointer;
+  font-family: var(--font-stamp);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: 10px;
+  transition: transform .18s var(--ease-pop), padding .18s var(--ease-pop);
+  animation: tabIn .3s var(--ease-pop);
+}
+@keyframes tabIn {
+  0% { opacity: 0; transform: translateY(-12px); }
+  100% { opacity: 1; transform: none; }
+}
+#tab:hover { transform: translateY(2px); padding-bottom: 9px; }
+.tab__dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ink-faint);
+}
+body[data-running="true"] .tab__dot { background: var(--chip-accent, var(--orange)); animation: chipBlip 1.4s ease-in-out infinite; }
+#tabTime { font-family: var(--font-digit); letter-spacing: .04em; font-size: 12px; }
+.tab__chev { font-size: 8px; opacity: .7; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001s !important; }
+}

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:;" />
+  <title>Tick - Desk</title>
+  <link rel="stylesheet" href="../shared/theme.css" />
+  <link rel="stylesheet" href="shell.css" />
+</head>
+<body data-mode="focus" data-status="idle" data-app="today">
+
+  <header id="titlebar">
+    <div class="tb__brand">
+      <svg id="minipet" class="minipet" viewBox="0 0 200 200" width="32" height="32" aria-hidden="true"></svg>
+      <div class="tb__names">
+        <strong id="tbApp">TODAY</strong>
+        <span class="stamp" id="tbBlurb">everything at a glance</span>
+      </div>
+    </div>
+
+    <div class="tb__drag"></div>
+
+    <div class="tb__live" id="tbLive" hidden>
+      <span class="dot"></span>
+      <span id="tbLiveTime">00:00</span>
+      <span id="tbLiveTask" class="tb__liveTask"></span>
+    </div>
+
+    <div class="tb__actions">
+      <button class="tb__btn" id="tbSettings" title="Settings">&#9881;</button>
+      <button class="tb__btn" id="tbMin" title="Back to the pet (Ctrl+Alt+4)">&#8211;</button>
+      <button class="tb__btn" id="tbMax" title="Maximize">&#9723;</button>
+      <button class="tb__btn tb__btn--close" id="tbClose" title="Close to the pet">&#10005;</button>
+    </div>
+  </header>
+
+  <div id="frame">
+    <nav id="rail" aria-label="Apps"></nav>
+    <main id="view"></main>
+  </div>
+
+  <!-- ------------------------------------------------------------ settings -->
+  <div id="settingsDrawer" class="drawer" hidden>
+    <div class="drawer__panel">
+      <div class="card__head">
+        <span class="stamp">Settings</span>
+        <button class="tb__btn" id="settingsClose">&#10005;</button>
+      </div>
+
+      <section class="petPicker">
+        <div class="petPicker__head">
+          <div>
+            <div class="petName" id="petName">Tick</div>
+            <div class="petBlurb" id="petBlurb">the original desk alarm clock</div>
+            <div class="petQuote" id="petQuote"></div>
+          </div>
+          <div class="seg" id="faceSeg" role="group" aria-label="Clock face">
+            <button data-face="analog">Analog</button>
+            <button data-face="digital">Digital</button>
+          </div>
+        </div>
+
+        <div class="petGrid" id="petGrid"></div>
+
+        <label class="petSize">
+          <span class="stamp">Size</span>
+          <input type="range" id="setScale" min="0.6" max="2" step="0.05" />
+          <span id="scaleOut" class="scaleOut">100%</span>
+        </label>
+      </section>
+
+      <div class="setGrid">
+        <label>Focus minutes <input type="number" id="setFocus" min="1" max="180" /></label>
+        <label>Short break <input type="number" id="setShort" min="1" max="60" /></label>
+        <label>Long break <input type="number" id="setLong" min="1" max="90" /></label>
+        <label>Long break every <input type="number" id="setEvery" min="0" max="12" /></label>
+        <label>Daily goal (minutes) <input type="number" id="setGoal" min="0" max="900" /></label>
+        <label>Volume <input type="range" id="setVolume" min="0" max="1" step="0.05" /></label>
+      </div>
+
+      <div class="setToggles">
+        <label class="toggle"><input type="checkbox" id="setAutoBreak" /> <span>Auto-start breaks</span></label>
+        <label class="toggle"><input type="checkbox" id="setAutoFocus" /> <span>Auto-start next focus</span></label>
+        <label class="toggle"><input type="checkbox" id="setSound" /> <span>Chimes</span></label>
+        <label class="toggle"><input type="checkbox" id="setAutoStart" /> <span>Start with Windows</span></label>
+      </div>
+
+      <div class="keys">
+        <div class="stamp">Shortcuts</div>
+        <div><b id="keyCapture">Ctrl+Alt+Space</b> quick capture, from anywhere</div>
+        <div><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>X</kbd> grab a screen region straight to the inbox</div>
+        <div><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>3</kbd> show / hide the dock</div>
+        <div><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>4</kbd> open / hide this desk</div>
+        <div><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>5</kbd> show / hide the pet</div>
+        <div><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>6</kbd> start, pause or resume</div>
+      </div>
+
+      <div class="drawer__foot">
+        <button class="btn" id="btnResetWidget">Reset pet position</button>
+        <button class="btn btn--danger" id="btnQuit">Quit Tick</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/format.js"></script>
+  <script src="../shared/characters.js"></script>
+  <script src="../shared/apps.js"></script>
+  <script src="../shared/parse.js"></script>
+  <script src="shell.js"></script>
+  <script src="viewer.js"></script>
+  <script src="apps/inbox.js"></script>
+  <script src="apps/today.js"></script>
+  <script src="apps/timer.js"></script>
+  <script src="apps/tasks.js"></script>
+  <script src="apps/notes.js"></script>
+  <script src="apps/habits.js"></script>
+  <script src="apps/journal.js"></script>
+  <script src="boot.js"></script>
+</body>
+</html>

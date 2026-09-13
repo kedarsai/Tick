@@ -1,0 +1,179 @@
+/* Shared design tokens: warm retro-bureaucratic cartoon.
+   Thick ink outlines, offset hard shadows, aged-paper cream. */
+:root {
+  --cream: #fdf4e3;
+  --paper: #fffaf2;
+  --paper-dim: #f6e9d2;
+  --ink: #3a261c;
+  --ink-soft: #6b5244;
+  --ink-faint: #a08d7d;
+
+  --orange: #f48f2d;
+  --orange-deep: #d66a16;
+  --orange-glow: #ffb35c;
+  --mustard: #e9c46a;
+  --brick: #c9452f;
+  --teal: #2f8577;
+  --teal-deep: #1f6154;
+  --plum: #7b5ea7;
+
+  --line: 3px solid var(--ink);
+  --line-thin: 2px solid var(--ink);
+
+  /* Quiet separation. Heavy ink outlines suit a cartoon character; a screen
+     full of dense lists just reads as boxes inside boxes. Containers get a
+     hairline and a soft shadow, and only things you can press keep the chunk. */
+  --edge: 1px solid rgba(58, 38, 28, .12);
+  --edge-soft: 1px solid rgba(58, 38, 28, .08);
+  --edge-strong: 1.5px solid rgba(58, 38, 28, .2);
+  --shadow-soft: 0 1px 2px rgba(58, 38, 28, .04), 0 8px 22px rgba(58, 38, 28, .06);
+  --shadow-hover: 0 2px 4px rgba(58, 38, 28, .06), 0 12px 28px rgba(58, 38, 28, .09);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 4px 4px 0 var(--ink);
+  --shadow-sm: 3px 3px 0 var(--ink);
+  --shadow-lift: 6px 6px 0 var(--ink);
+
+  --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-stamp: "Bahnschrift", "Segoe UI Semibold", var(--font);
+  --font-digit: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+
+  --ease-pop: cubic-bezier(.34, 1.8, .5, 1);
+  --ease-soft: cubic-bezier(.4, 0, .2, 1);
+}
+
+/* Mode accents, set on a container via data-mode. */
+[data-mode="focus"] { --accent: var(--orange); --accent-deep: var(--orange-deep); }
+[data-mode="short"] { --accent: var(--teal); --accent-deep: var(--teal-deep); }
+[data-mode="long"] { --accent: var(--plum); --accent-deep: #5e4485; }
+[data-mode="stopwatch"] { --accent: var(--mustard); --accent-deep: #c8a23f; }
+
+* { box-sizing: border-box; }
+
+/* An author `display` rule outranks the UA stylesheet's [hidden] rule, so
+   el.hidden alone is not enough to hide anything we also style. */
+[hidden] { display: none !important; }
+
+.stamp {
+  font-family: var(--font-stamp);
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+/* Chunky cartoon button: presses in, never mushy. */
+.btn {
+  font-family: var(--font-stamp);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 9px 16px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform .12s var(--ease-pop), box-shadow .12s var(--ease-pop),
+              background .15s var(--ease-soft);
+  user-select: none;
+}
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+.btn:active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: var(--shadow-sm); }
+.btn--primary { background: var(--accent, var(--orange)); color: #fff; }
+.btn--danger { background: var(--brick); color: #fff; }
+.btn--ghost { background: transparent; box-shadow: none; border-color: transparent; }
+.btn--ghost:hover { background: rgba(58, 38, 28, .07); box-shadow: none; transform: none; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--ink-faint);
+  border-radius: 999px;
+  border: 2px solid var(--cream);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--ink-soft); }
+
+/* ===================================================================== parts
+   A small vocabulary of part movements. Characters tag a limb, wing, flame or
+   tail with one of these plus an origin helper, and it moves on its own -
+   independently of whatever the whole creature is doing. */
+[class*="pt-"] { transform-box: fill-box; }
+
+.o-top          { transform-origin: 50% 0%; }
+.o-bottom       { transform-origin: 50% 100%; }
+.o-left         { transform-origin: 0% 50%; }
+.o-right        { transform-origin: 100% 50%; }
+.o-bottomleft   { transform-origin: 0% 100%; }
+.o-bottomright  { transform-origin: 100% 100%; }
+
+.pt-sway        { animation: ptSway 3.6s ease-in-out infinite; }
+.pt-sway-late   { animation: ptSway 3.6s ease-in-out infinite .7s; }
+@keyframes ptSway { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+
+.pt-flick       { animation: ptFlick 2.6s ease-in-out infinite; }
+@keyframes ptFlick {
+  0%, 55%, 100% { transform: rotate(0deg); }
+  68% { transform: rotate(-15deg); }
+  82% { transform: rotate(11deg); }
+}
+
+.pt-flap        { animation: ptFlap .16s ease-in-out infinite; }
+@keyframes ptFlap { 0%,100% { transform: scaleY(1) rotate(0deg); } 50% { transform: scaleY(.55) rotate(-7deg); } }
+
+.pt-flame       { animation: ptFlame .22s ease-in-out infinite; }
+@keyframes ptFlame {
+  0%,100% { transform: scaleY(1) scaleX(1); opacity: 1; }
+  50% { transform: scaleY(1.5) scaleX(.82); opacity: .8; }
+}
+
+.pt-steam       { animation: ptSteam 2.8s ease-out infinite; }
+@keyframes ptSteam {
+  0% { transform: translateY(6px); opacity: 0; }
+  35% { opacity: .9; }
+  100% { transform: translateY(-12px); opacity: 0; }
+}
+
+.pt-ripple      { animation: ptRipple 2.4s ease-in-out infinite; }
+.pt-ripple-a    { animation: ptRipple 2.4s ease-in-out infinite .3s; }
+.pt-ripple-b    { animation: ptRipple 2.4s ease-in-out infinite .6s; }
+@keyframes ptRipple { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+
+.pt-twitch      { animation: ptTwitch 4.2s ease-in-out infinite; }
+.pt-twitch-late { animation: ptTwitch 4.2s ease-in-out infinite .25s; }
+@keyframes ptTwitch {
+  0%, 88%, 100% { transform: rotate(0deg); }
+  92% { transform: rotate(-9deg); }
+  96% { transform: rotate(6deg); }
+}
+
+.pt-blip        { animation: ptBlip 1.5s ease-in-out infinite; }
+@keyframes ptBlip { 0%,100% { opacity: 1; } 45% { opacity: .25; } }
+
+.pt-drip        { animation: ptDrip 1.3s linear infinite; }
+@keyframes ptDrip {
+  0% { transform: translateY(-5px); opacity: 0; }
+  25% { opacity: 1; }
+  100% { transform: translateY(9px); opacity: 0; }
+}
+
+.pt-twinkle      { animation: ptTwinkle 2.2s ease-in-out infinite; }
+.pt-twinkle-late { animation: ptTwinkle 2.2s ease-in-out infinite 1.1s; }
+@keyframes ptTwinkle {
+  0%,100% { transform: scale(.75) rotate(0deg); opacity: .55; }
+  50% { transform: scale(1.15) rotate(35deg); opacity: 1; }
+}
+
+.pt-hop-tiny    { animation: ptHopTiny 2.1s ease-in-out infinite; }
+@keyframes ptHopTiny { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
+
+.pt-paddle      { animation: ptPaddle 1.7s ease-in-out infinite; }
+.pt-paddle-late { animation: ptPaddle 1.7s ease-in-out infinite .5s; }
+@keyframes ptPaddle { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(8deg); } }
+
+.pt-squish      { animation: ptSquish 2.9s ease-in-out infinite; }
+@keyframes ptSquish { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(.82); } }
+
+.pt-ring        { animation: none; }

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:;" />
+  <title>Capture</title>
+  <link rel="stylesheet" href="../shared/theme.css" />
+  <link rel="stylesheet" href="capture.css" />
+</head>
+<body>
+  <div id="stage">
+    <div id="box">
+      <div class="box__head">
+        <span class="stamp">Capture</span>
+        <span class="stamp box__dest" id="dest">&rarr; Inbox</span>
+      </div>
+      <textarea id="field" rows="1" spellcheck="false" maxlength="1000"
+                placeholder="What's on your mind?"></textarea>
+      <div class="shotChip" id="shotChip" hidden>
+        <img id="shotThumb" alt="" />
+        <span class="shotChip__meta" id="shotMeta"></span>
+        <button class="shotChip__drop" id="shotDrop" title="Remove">&#10005;</button>
+      </div>
+
+      <div class="box__foot">
+        <span class="hint"><kbd>Enter</kbd> save &middot; <kbd>Shift</kbd>+<kbd>Enter</kbd> new line &middot; <kbd>Esc</kbd> close</span>
+        <div class="box__tools">
+          <button class="shotBtn" id="shotBtn" title="Grab a region of the screen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 8.4a2 2 0 0 1 2-2h2.4L9 4.2h6l1.6 2.2H19a2 2 0 0 1 2 2v9.4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <circle cx="12" cy="13" r="3.6" />
+            </svg>
+            <span>Region</span>
+          </button>
+          <span class="box__saved" id="saved">Saved</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="capture.js"></script>
+</body>
+</html>

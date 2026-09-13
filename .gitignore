@@ -1,0 +1,12 @@
+# dependencies and builds
+node_modules/
+dist/
+*.log
+
+# Personal data never belongs in this repo. Tick keeps it in %APPDATA%\tick
+# (tick-data.json and shots\); these rules catch anything copied in by mistake.
+tick-data.json*
+*.corrupt-*
+*.tmp
+shots/
+.env

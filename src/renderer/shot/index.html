@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:;" />
+  <title>Select a region</title>
+  <link rel="stylesheet" href="../shared/theme.css" />
+  <link rel="stylesheet" href="shot.css" />
+</head>
+<body>
+  <img id="frozen" alt="" />
+  <div id="scrim"></div>
+  <div id="sel" hidden></div>
+  <div id="size" hidden></div>
+  <div id="tip">Drag to select a region &middot; <b>Esc</b> to cancel</div>
+  <script src="shot.js"></script>
+</body>
+</html>

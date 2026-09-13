@@ -1,0 +1,35 @@
+{
+  "name": "tick",
+  "version": "0.1.0",
+  "description": "TICK - a cartoon desk companion pomodoro timer for Windows",
+  "main": "src/main/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder --win portable",
+    "dist": "electron-builder --win nsis",
+    "test": "node --test test/timer.test.js test/store.test.js test/characters.test.js test/parse.test.js test/launchers.test.js"
+  },
+  "author": "kedar",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.kedar.tick",
+    "productName": "Tick",
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.ico"
+    }
+  }
+}

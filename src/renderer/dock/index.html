@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
+  <title>Suite dock</title>
+  <link rel="stylesheet" href="../shared/theme.css" />
+  <link rel="stylesheet" href="dock.css" />
+</head>
+<body data-collapsed="false">
+  <div id="stage">
+
+    <!-- the bar -->
+    <nav id="bar" class="solid" aria-label="Productivity suite">
+      <div class="bar__grip" id="grip" title="Drag to move the dock">
+        <span></span><span></span>
+      </div>
+
+      <div class="bar__apps" id="apps"></div>
+
+      <div class="bar__sep"></div>
+
+      <button class="chip" id="timerChip" title="Open the timer">
+        <span class="chip__dot" id="chipDot"></span>
+        <span class="chip__time" id="chipTime">Idle</span>
+      </button>
+
+      <button class="bar__btn" id="btnCollapse" title="Collapse the dock">&#9650;</button>
+    </nav>
+
+    <!-- collapsed: a small tab you click to bring it back -->
+    <button id="tab" class="solid" title="Open the dock" hidden>
+      <span class="tab__dot" id="tabDot"></span>
+      <span id="tabTime">Suite</span>
+      <span class="tab__chev">&#9660;</span>
+    </button>
+
+  </div>
+
+  <script src="../shared/format.js"></script>
+  <script src="../shared/apps.js"></script>
+  <script src="dock.js"></script>
+</body>
+</html>

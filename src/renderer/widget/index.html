@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
+  <title>Tick</title>
+  <link rel="stylesheet" href="../shared/theme.css" />
+  <link rel="stylesheet" href="widget.css" />
+</head>
+<body data-mode="focus" data-status="idle">
+  <div id="stage">
+
+    <!-- Control tray: unfolds above the pet when you click it -->
+    <section id="panel" class="solid" aria-label="Timer controls">
+      <div class="panel__head">
+        <span class="stamp" id="panelMode">Focus</span>
+        <div class="panel__headBtns">
+          <button class="icon-btn" id="btnDock" title="Tuck away to the screen edge">&#8942;&#8942;</button>
+          <button class="icon-btn" id="btnDesk" title="Open the full desk (Ctrl+Alt+4)">&#9634;</button>
+          <button class="icon-btn" id="btnHide" title="Send the pet away (Ctrl+Alt+5)">&#10005;</button>
+        </div>
+      </div>
+
+      <input id="taskInput" class="task-input" type="text" maxlength="160" spellcheck="false"
+             placeholder="What are you working on?" />
+
+      <div class="modes" id="modes">
+        <button class="chip" data-mode="focus">Focus</button>
+        <button class="chip" data-mode="short">Short</button>
+        <button class="chip" data-mode="long">Long</button>
+        <button class="chip" data-mode="stopwatch">Free</button>
+      </div>
+
+      <div class="panel__actions" id="idleActions">
+        <button class="btn btn--primary btn-wide" id="btnStart">Start</button>
+      </div>
+
+      <div class="panel__actions" id="runActions" hidden>
+        <button class="btn" id="btnPause">Pause</button>
+        <button class="btn" id="btnExtend">+5 min</button>
+        <button class="btn btn--danger" id="btnStop">Stop</button>
+      </div>
+    </section>
+
+    <!-- Speech bubble for nudges and celebrations -->
+    <div id="bubble" class="solid" hidden><span id="bubbleText"></span></div>
+
+    <!-- The pet. The SVG body is drawn by characters.js at runtime. -->
+    <div id="petWrap">
+      <div id="zzz" class="zzz" aria-hidden="true">
+        <span>z</span><span>z</span><span>z</span>
+      </div>
+
+      <svg id="pet" class="solid" viewBox="0 0 200 200"
+           role="img" aria-label="Your timer pet"></svg>
+
+      <!-- the glanceable readout -->
+      <div id="badge" class="solid">
+        <span id="badgeTime">25:00</span>
+        <span id="badgeLabel" class="stamp">focus</span>
+      </div>
+    </div>
+
+    <div id="confetti" aria-hidden="true"></div>
+
+    <!-- Tucked away: a tab clinging to the screen edge -->
+    <div id="dock" hidden>
+      <div class="dockTime" id="dockTime">25:00</div>
+      <button class="dockTab solid" id="dockTab" title="Bring the pet back">
+        <svg class="dockRing" viewBox="0 0 64 64" aria-hidden="true">
+          <circle class="dockRing__track" cx="32" cy="32" r="29" />
+          <circle class="dockRing__fill" id="dockRingFill" cx="32" cy="32" r="29"
+                  transform="rotate(-90 32 32)" />
+        </svg>
+        <svg class="dockPet" id="dockPet" viewBox="0 0 200 200" aria-hidden="true"></svg>
+      </button>
+    </div>
+  </div>
+
+  <script src="../shared/format.js"></script>
+  <script src="../shared/characters.js"></script>
+  <script src="widget.js"></script>
+</body>
+</html>
