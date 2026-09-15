@@ -80,8 +80,9 @@
     }
   ];
 
-  // Companions are separate apps in their own folders. They get a dock button
-  // (which launches them) but no place in the desk's rail.
+  // Companions are separate apps, installed on their own. They get a dock
+  // button (which opens their Start Menu shortcut) but no place in the desk's
+  // rail.
   const COMPANIONS = [
     {
       id: 'folio',

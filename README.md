@@ -155,6 +155,13 @@ A pill at the top of the screen with one icon per app, a live timer chip, and a
 collapse arrow. Drag it by the grip on the left. Collapsed, it becomes a small
 tab hanging from the top edge — click it to bring the bar back.
 
+After a divider come the **companion apps** — separate apps with their own
+repos, such as [Folio](https://github.com/kedarsai/Folio). Tick does not care
+where they are installed: a companion's button opens its Start Menu shortcut
+(`Folio.lnk`), just as clicking it in the Start Menu would. Install that
+shortcut once from the companion's own folder
+(`scripts\install-shortcuts.ps1`); if it is missing, the button says so.
+
 ## Using the timer
 
 Type what you are working on, pick a mode, hit start. When the session ends it
