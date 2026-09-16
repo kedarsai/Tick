@@ -9,7 +9,7 @@
     "dev": "electron . --dev",
     "build": "electron-builder --win portable",
     "dist": "electron-builder --win nsis",
-    "test": "node --test test/timer.test.js test/store.test.js test/characters.test.js test/parse.test.js test/launchers.test.js"
+    "test": "node --test test/timer.test.js test/store.test.js test/characters.test.js test/parse.test.js test/launchers.test.js test/catalog.test.js test/shots.test.js"
   },
   "author": "kedar",
   "license": "UNLICENSED",

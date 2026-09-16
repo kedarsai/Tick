@@ -102,6 +102,7 @@ Shell.register('notes', (view, UI) => {
       text: note.body || '',
       placeholder: 'Write about this picture...',
       onText: (value) => DB.update('notes', note.id, { body: value }),
+      onShot: (shot) => DB.update('notes', note.id, { shot }),
       meta: [
         { label: 'Note', value: note.title.trim() || 'Untitled' },
         { label: 'Size', value: `${note.shot.width} x ${note.shot.height}` },

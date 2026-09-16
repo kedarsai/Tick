@@ -183,6 +183,7 @@ async function fillSettings() {
   const s = DB.settings;
   if (!s) return;
   renderPetGrid();
+  CatalogPanel.refresh();
   try { $('setAutoStart').checked = await window.tick.autoStart.get(); }
   catch (_) { /* the toggle just shows stale state */ }
   for (const [id, key, type] of SETTING_FIELDS) {

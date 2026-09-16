@@ -11,6 +11,8 @@ Shell.register('tasks', (view, UI) => {
   let mode = DB.settings.taskView === 'calendar' ? 'calendar' : 'list';
   let filter = 'open';
   let tagFilter = null;
+  let projectFilter = null;                  // also the project new tasks join
+  let openId = null;                         // the task the detail panel shows
   let cursor = startOfMonth(new Date());     // which month the calendar shows
 
   function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
@@ -34,13 +36,17 @@ Shell.register('tasks', (view, UI) => {
       </div>
 
       <div class="stats" id="taskStats"></div>
-      <div id="taskBody" class="taskBody"></div>
+      <div class="taskMain">
+        <div id="taskBody" class="taskBody"></div>
+        <aside id="taskPanel" class="taskPanel card" hidden></aside>
+      </div>
     </div>`;
 
   const el = {
     input: view.querySelector('#newTask'),
     stats: view.querySelector('#taskStats'),
     body: view.querySelector('#taskBody'),
+    panel: view.querySelector('#taskPanel'),
     seg: view.querySelector('#viewSeg')
   };
 
@@ -51,7 +57,16 @@ Shell.register('tasks', (view, UI) => {
     const parsed = UI.parseTask(raw);
     if (!parsed.title) return;
     el.input.value = '';
-    await DB.add('tasks', { ...parsed, dueTime: null, someday: false, done: false, doneAt: null });
+    // Typing under a project filter means "another one of these".
+    await DB.add('tasks', {
+      ...parsed,
+      projectId: projectFilter,
+      identity: '',
+      dueTime: null,
+      someday: false,
+      done: false,
+      doneAt: null
+    });
   }
 
   el.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') addTask(); });
@@ -115,6 +130,7 @@ Shell.register('tasks', (view, UI) => {
     const today = UI.dayKey();
     let list = tasks();
     if (tagFilter) list = list.filter((t) => (t.tags || []).includes(tagFilter));
+    if (projectFilter) list = list.filter((t) => t.projectId === projectFilter);
 
     if (filter === 'done') list = list.filter((t) => t.done);
     else if (filter === 'today') list = list.filter((t) => !t.done && t.due && t.due <= today);
@@ -134,6 +150,19 @@ Shell.register('tasks', (view, UI) => {
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
   }
 
+  /* What a task belongs to, under its title: its number, its project, its
+     tags. Only what it actually has - an empty line would be noise. */
+  function metaLine(t) {
+    const bits = [];
+    if (t.identity) bits.push(`<span class="taskId">${esc(t.identity)}</span>`);
+    const project = Catalog.projectById(DB.get('projects'), t.projectId);
+    if (project) bits.push(`<span class="taskProject">${esc(project.name)}</span>`);
+    for (const tag of t.tags || []) {
+      bits.push(`<span class="taskTag" style="--tag:${esc(Catalog.tagAccent(DB.get('tags'), tag))}">#${esc(tag)}</span>`);
+    }
+    return bits.length ? `<div class="item__meta taskMeta">${bits.join('')}</div>` : '';
+  }
+
   function renderList() {
     const today = UI.dayKey();
     const list = visibleTasks();
@@ -147,12 +176,12 @@ Shell.register('tasks', (view, UI) => {
         ? `<span class="pill ${late ? 'pill--late' : (t.someday ? 'pill--soft' : 'pill--due')}">${esc(when)}</span>`
         : '';
       return `
-        <div class="item ${t.done ? 'done' : ''}">
+        <div class="item ${t.done ? 'done' : ''} ${t.id === openId ? 'is-open' : ''}">
           <button class="check ${t.done ? 'is-on' : ''}" data-id="${t.id}" title="Toggle">&#10003;</button>
-          <div class="item__body">
+          <div class="item__body taskOpen" data-id="${t.id}" title="Open the details">
             <div class="taskTitle item__title" contenteditable="plaintext-only"
                  spellcheck="false" data-id="${t.id}">${esc(t.title)}</div>
-            ${(t.tags || []).length ? `<div class="item__meta">${(t.tags || []).map((x) => '#' + esc(x)).join(' ')}</div>` : ''}
+            ${metaLine(t)}
           </div>
           ${duePill}
           <input class="dueInput" type="date" data-id="${t.id}" value="${t.due || ''}" title="Due date" />
@@ -176,6 +205,11 @@ Shell.register('tasks', (view, UI) => {
             <button data-f="done">Done</button>
           </div>
           <div class="card__tools">
+            <select class="input small taskProjectFilter" id="projectFilter" title="Show one project">
+              <option value="">All projects</option>
+              ${Catalog.openProjects(DB.get('projects')).map((p) => `
+                <option value="${esc(p.id)}" ${p.id === projectFilter ? 'selected' : ''}>${esc(Catalog.projectLabel(p))}</option>`).join('')}
+            </select>
             <div class="tags" id="taskTags">
               ${topTags().map(([tag, n]) => `
                 <button class="tag ${tagFilter === tag ? 'is-on' : ''}" data-tag="${esc(tag)}">#${esc(tag)} ${n}</button>`).join('')}
@@ -272,6 +306,166 @@ Shell.register('tasks', (view, UI) => {
       </div>`;
   }
 
+  // ======================================================= the detail panel
+  /* Everything about one task in one place: what it is, whose it is, what to
+     call it when you talk to other people about it, and when it is due. */
+  function renderPanel() {
+    const t = openId ? byId(openId) : null;
+    if (!t) {
+      openId = null;
+      el.panel.hidden = true;
+      el.panel.innerHTML = '';
+      return;
+    }
+    // A background save must not yank a field out from under the cursor.
+    if (!el.panel.hidden && el.panel.contains(document.activeElement)) return;
+
+    const all = DB.get('projects');
+    const chosen = Catalog.projectById(all, t.projectId);
+    const options = Catalog.openProjects(all);
+    // An archived project still shows while a task is on it.
+    if (chosen && chosen.archived) options.push(chosen);
+
+    el.panel.innerHTML = `
+      <div class="card__head">
+        <span class="stamp">Task</span>
+        <button class="tb__btn" id="panelClose" title="Close (Esc)">&#10005;</button>
+      </div>
+
+      <label class="panelField">
+        <span class="stamp">Title</span>
+        <input class="input" id="pTitle" maxlength="200" spellcheck="false" value="${esc(t.title)}" />
+      </label>
+
+      <label class="panelField">
+        <span class="stamp">Project</span>
+        <select class="input" id="pProject">
+          <option value="">No project</option>
+          ${options.map((p) => `
+            <option value="${esc(p.id)}" ${p.id === t.projectId ? 'selected' : ''}>
+              ${esc(Catalog.projectLabel(p))}${p.archived ? ' - archived' : ''}
+            </option>`).join('')}
+        </select>
+      </label>
+
+      <label class="panelField">
+        <span class="stamp">Identity number</span>
+        <input class="input" id="pIdentity" maxlength="40" spellcheck="false"
+               placeholder="optional - DM-142, INC-88, anything"
+               value="${esc(t.identity || '')}" />
+      </label>
+
+      <div class="panelField">
+        <span class="stamp">Tags</span>
+        <div class="tags panelTags">
+          ${(t.tags || []).map((tag) => `
+            <button class="tag panelTag" data-drop="${esc(tag)}"
+                    style="--tag:${esc(Catalog.tagAccent(DB.get('tags'), tag))}"
+                    title="Take it off">#${esc(tag)} &#10005;</button>`).join('')}
+        </div>
+        <input class="input" id="pTagAdd" list="tagOptions" maxlength="40" spellcheck="false"
+               placeholder="add a tag" />
+        <datalist id="tagOptions">
+          ${Catalog.tagsNotOn(DB.get('tags'), t.tags).map((x) => `<option value="${esc(x.name)}"></option>`).join('')}
+        </datalist>
+      </div>
+
+      <div class="panelRow">
+        <label class="panelField grow">
+          <span class="stamp">Due</span>
+          <input class="input" type="date" id="pDue" value="${t.due || ''}" />
+        </label>
+        <label class="panelField">
+          <span class="stamp">Time</span>
+          <input class="input" type="time" id="pTime" step="300" value="${t.dueTime || ''}" />
+        </label>
+      </div>
+
+      <label class="toggle panelFlag">
+        <input type="checkbox" id="pFlag" ${t.priority ? 'checked' : ''} /> <span>Flagged</span>
+      </label>
+
+      <div class="panelFoot">
+        <button class="btn btn--ghost small" id="pTimer">Start a session</button>
+        <button class="btn btn--danger small" id="pDelete">Delete</button>
+      </div>`;
+    el.panel.hidden = false;
+  }
+
+  function openPanel(id) {
+    openId = id;
+    render();
+    const title = el.panel.querySelector('#pTitle');
+    if (title) title.focus();
+  }
+
+  function closePanel() {
+    openId = null;
+    render();
+  }
+
+  async function addTagFromPanel(value) {
+    const t = byId(openId);
+    const name = Catalog.tagName(value);
+    if (!t || !name) return;
+    if ((t.tags || []).includes(name)) return;
+    // The store adopts an unknown name into the catalogue on the way past.
+    await DB.update('tasks', t.id, { tags: [...(t.tags || []), name] });
+    render();
+  }
+
+  el.panel.addEventListener('click', async (e) => {
+    const t = byId(openId);
+    if (e.target.closest('#panelClose')) return closePanel();
+    if (!t) return;
+
+    const drop = e.target.closest('.panelTag');
+    if (drop) {
+      await DB.update('tasks', t.id, {
+        tags: (t.tags || []).filter((x) => x !== drop.dataset.drop)
+      });
+      return render();
+    }
+    if (e.target.closest('#pDelete')) {
+      await DB.remove('tasks', t.id);
+      return closePanel();
+    }
+    if (e.target.closest('#pTimer')) {
+      window.tick.timer.start({
+        mode: 'focus',
+        task: [t.title, ...(t.tags || []).map((x) => '#' + x)].join(' ')
+      });
+      Shell.open('timer');
+    }
+  });
+
+  el.panel.addEventListener('change', async (e) => {
+    const t = byId(openId);
+    if (!t) return;
+    const patch = {
+      pTitle: () => ({ title: e.target.value.trim() || t.title }),
+      pProject: () => ({ projectId: e.target.value || null }),
+      pIdentity: () => ({ identity: e.target.value.trim() }),
+      pDue: () => ({ due: e.target.value || null, someday: false }),
+      pTime: () => ({ dueTime: e.target.value || null }),
+      pFlag: () => ({ priority: e.target.checked })
+    }[e.target.id];
+    if (patch) await DB.update('tasks', t.id, patch());
+  });
+
+  el.panel.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); return closePanel(); }
+    if (e.key !== 'Enter') return;
+    if (e.target.id === 'pTagAdd') {
+      e.preventDefault();
+      const value = e.target.value;
+      e.target.value = '';
+      addTagFromPanel(value);
+    } else if (e.target.classList.contains('input')) {
+      e.target.blur();
+    }
+  });
+
   // ---------------------------------------------------------- behaviour
   el.body.addEventListener('click', async (e) => {
     const check = e.target.closest('.check');
@@ -307,6 +501,12 @@ Shell.register('tasks', (view, UI) => {
 
     const tag = e.target.closest('.tag');
     if (tag) { tagFilter = tagFilter === tag.dataset.tag ? null : tag.dataset.tag; return render(); }
+
+    // Clicking the row opens its details; clicking the title edits it in place.
+    const body = e.target.closest('.taskOpen');
+    if (body && !e.target.closest('.taskTitle')) {
+      return body.dataset.id === openId ? closePanel() : openPanel(body.dataset.id);
+    }
 
     if (e.target.closest('#clearDone')) {
       for (const t of tasks().filter((x) => x.done)) await DB.remove('tasks', t.id);
@@ -344,6 +544,10 @@ Shell.register('tasks', (view, UI) => {
   el.body.addEventListener('change', (e) => {
     if (e.target.classList.contains('dueInput')) {
       DB.update('tasks', e.target.dataset.id, { due: e.target.value || null });
+    }
+    if (e.target.id === 'projectFilter') {
+      projectFilter = e.target.value || null;
+      render();
     }
   });
 
@@ -398,6 +602,7 @@ Shell.register('tasks', (view, UI) => {
     }
     renderStats();
     if (mode === 'calendar') renderCalendar(); else renderList();
+    renderPanel();
   }
 
   render();

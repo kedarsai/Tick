@@ -19,7 +19,7 @@ Three parts:
 | **Inbox** | Everything you captured, waiting to be sorted. Drag a card onto a lane — Task, Later, Note, Idea, Feeling, Bin |
 | **Today** | The one screen that answers "what now?" — focus time, what is due, habits, recent notes, and one capture box |
 | **Timer** | Pomodoro sessions and the honest record of what they were spent on |
-| **Tasks** | To-dos with tags, due dates and flags, as a list or a month calendar. Start a focus session on any task |
+| **Tasks** | To-dos with a project, an optional identity number, tags, due dates and flags, as a list or a month calendar. Start a focus session on any task |
 | **Notes** | A list on the left, the note on the right, saved as you type |
 | **Habits** | A row per habit, a square per day, streaks worth protecting |
 | **Journal** | One entry per day, with a mood |
@@ -38,19 +38,16 @@ npm start
 the background: you get the dock and the pet, not a window in your face. Toggle
 it under Settings > *Start with Windows*, or from the tray menu.
 
-Ctrl+Alt+4 is owned by Windows, not by the app, so it works even when Tick is
-closed - it launches it. Install the shortcuts once:
+Install the shortcuts once:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\install-shortcuts.ps1
 ```
 
-That creates two shortcuts:
-
-- **Start Menu** - carries the `Ctrl+Alt+4` shortcut key. Explorer registers it
-  system-wide, so it works whether or not Tick is running. Leave this one where
-  it is; Windows only honours shortcut keys from the Start Menu or Desktop.
-- **Desktop** - an ordinary launcher.
+That creates a Start Menu and a Desktop shortcut, and registers the AutoHotkey
+bridge that carries `Ctrl+Alt+Space` to quick capture. Neither shortcut carries
+a shortcut key: Tick holds two hotkeys and no more, because every key taken is
+taken from every other app on the machine.
 
 Undo it all with the same command plus `-Remove`.
 
@@ -59,24 +56,21 @@ so there is exactly one of it and it can be toggled from Settings. An older
 build did use a Startup shortcut; Tick deletes it on sight, because having both
 would launch two copies every morning.
 
-`Ctrl+Alt+5` and `Ctrl+Alt+6` are registered by the app itself, so those two only
-work while Tick is running.
-
 ## Hotkeys
 
 | Key | Does |
 | --- | --- |
 | `Ctrl` `Alt` `Space` | quick capture from anywhere *(via the AutoHotkey bridge)* |
-| `Ctrl` `Alt` `C` | quick capture — the fixed second door, always works |
-| `Ctrl` `Alt` `X` | grab a screen region straight to the inbox |
-| `Ctrl` `Alt` `3` | show / hide the dock *(only while Tick runs)* |
-| `Ctrl` `Alt` `4` | launch Tick, or toggle the desk if it is already running |
-| `Ctrl` `Alt` `5` | show / hide the pet *(only while Tick runs)* |
-| `Ctrl` `Alt` `6` | start, pause or resume *(only while Tick runs)* |
+| `Ctrl` `Alt` `X` | drag a region of the screen straight to the inbox |
+| `Ctrl` `Alt` `C` | save the whole screen to the inbox, no selection |
+| `Ctrl` `Alt` `Q` | quick capture — the fixed door the bridge forwards to |
 
-If `Ctrl+Alt+4` stops working, the Start Menu shortcut was moved or deleted —
-re-run the installer. If 5 or 6 do not fire, something else on the machine owns
-them; the terminal prints a warning at startup saying which failed.
+All of them need Tick running; if one does not fire, something else on the
+machine owns it and the terminal says so at startup.
+
+The desk, the dock and the pet hold no keys. They are a click away on the dock,
+in the tray menu, or on the pet itself — and a hotkey that saves a click is not
+worth taking off every other app.
 
 ## Capture first, sort later
 
@@ -99,7 +93,8 @@ own pet, dock and capture box are hidden first, so they never end up in the
 picture.
 
 `Ctrl+Alt+X` skips the box entirely: drag a region and it lands in the inbox on
-its own, no typing.
+its own, no typing. `Ctrl+Alt+C` skips the dragging as well — it saves the whole
+screen under the cursor, says so once, and leaves it in the inbox.
 
 The crop is attached to the capture and follows it through triage — file it as a
 Note and the picture goes with it.
@@ -110,6 +105,11 @@ the text (editable in place), and the six triage lanes, so you can look at a
 screenshot and file it without closing anything. *Actual size* toggles between
 fit-to-window and 1:1. There are still **Copy image** and **Open externally**
 buttons if you want the OS viewer.
+
+**Crop** dims the picture and lets you drag the part worth keeping. Applying it
+writes a new picture and points the record at it, so **Undo crop** is there for
+as long as the viewer is open; closing the viewer makes the crop permanent and
+throws the old file away. Escape leaves the crop without leaving the picture.
 
 Screenshots live next to your data, in `%APPDATA%	ick\shots\`. Only files in
 that folder can be opened from the app.
@@ -136,15 +136,15 @@ Tick cannot register it — no app can.
 
 A **low-level keyboard hook** is the one exception: it sees the keystroke before
 Windows dispatches hotkeys at all. That is what `scripts/capture-hotkey.ahk`
-does — it swallows `Ctrl+Alt+Space` and forwards to `Ctrl+Alt+C`, which Tick
+does — it swallows `Ctrl+Alt+Space` and forwards to `Ctrl+Alt+Q`, which Tick
 always holds as a fixed second door. Both keys open capture; Claude never sees
-the keystroke.
+the keystroke. (That door used to be `Ctrl+Alt+C`, which now saves the screen.)
 
 The bridge needs AutoHotkey v2 (already installed here) and runs at login from
 its own `TickCaptureBridge` startup entry.
 
 Without the bridge, Tick falls back on its own: it asks for `Ctrl+Alt+Space`,
-settles for the best free alternative (`Ctrl+Alt+C`, then `Q`, `W`, `N`, `7`,
+settles for the best free alternative (`Ctrl+Alt+W`, then `N`, `7`,
 `Ctrl+Shift+Space`), and re-checks every 15 seconds — so freeing the key in
 whatever owns it hands it to Tick with no restart. Whatever is actually in force
 shows in Settings > Shortcuts and in the Today hint.
@@ -232,8 +232,8 @@ Each character has its own way of being alive:
   beside it whenever a session is running or you reach for it. Click the tab to
   bring the pet back exactly where it was, or drag the tab to slide it along the
   edge — let go and it snaps to whichever edge is nearest.
-- `Ctrl+Alt+5` brings a tucked pet back too; the tray menu has
-  *Tuck pet to the edge* / *Bring the pet back*.
+- The tray menu brings a tucked pet back: *Tuck pet to the edge* /
+  *Bring the pet back*.
 - **Drag** it (by the body or the badge) anywhere on screen; the position is
   remembered.
 - **Right-click** it to open the desk.
@@ -261,6 +261,25 @@ on the right to take the date off again, and drag from there onto a day to plan
 it. Today is outlined, days with overdue work are tinted, and each day shows how
 many things are still open. Click a task to tick it off without leaving.
 
+## Projects, identity numbers and tags
+
+Define projects and tags once, in **Settings > Projects & tags**. A project has
+a name and an optional **identity number** — a ticket, a case, a client
+reference, whatever you quote when you talk to other people about it. A tag has
+a name and a colour.
+
+Click any task to open its details beside the list: project, its own identity
+number, tags, due date and time, flag. The row itself keeps showing the short
+version — number, project, tags — so the list still reads at a glance. The
+filter bar narrows to one project, and while it does, anything you type joins
+that project.
+
+The tag catalogue keeps itself: typing `#something` on a task still works and
+adds it to the list. Renaming a tag in Settings renames it on every task and
+note; renaming onto an existing tag merges the two. Deleting a tag takes it off
+everything. Deleting a project never deletes its tasks — they simply belong to
+nothing again. Archiving one keeps it on old tasks but drops it from the picker.
+
 ## Where the data lives
 
 ```
@@ -283,8 +302,9 @@ src/renderer/
     apps/            one file per app - inbox, today, timer, tasks,
                      notes, habits, journal
   widget/            the pet
-  shared/            theme, formatting, the app registry,
-                     characters.js (the 25-creature roster)
+  shared/            theme, formatting, the app registry, catalog.js
+                     (projects and tags), characters.js (the 25-creature roster)
+  shell/catalog-panel.js  Settings > Projects & tags
 scripts/             icon generator, shortcut installer,
                      capture-hotkey.ahk (the Ctrl+Alt+Space bridge)
 test/                node --test
@@ -303,13 +323,23 @@ checked in as binaries someone has to re-export.
 npm test
 ```
 
-42 tests over four suites:
+69 tests over seven suites:
 
 - **timer** — counting down, pause not accruing time, partial vs completed
   entries, the noise floor, pomodoro counting and the long-break cycle,
   stopwatch mode, extending, and banking a running session when a new one starts.
 - **store** — round trips, missing keys backfilled from defaults, a corrupt file
-  preserved rather than dropped, and a UTF-8 BOM not destroying your data.
+  preserved rather than dropped, and a UTF-8 BOM not destroying your data. Also
+  the catalogue: tags adopted from whatever is written, tags already on old
+  records seeded once, a rename rewriting every task and note (and merging when
+  it lands on an existing tag), and a deleted project leaving its tasks alone.
+- **catalog** — the readings Settings and Tasks share: sorting, use counts,
+  archived projects dropping out of the picker, and tag colours.
+- **shots** — the crop rectangle: scaled onto the real pixels, clamped to the
+  edges, normalised when you drag backwards, and refused when it is a slip of
+  the hand.
+- **launchers** — companion apps start from their Start Menu shortcut, and a
+  missing or stale one says so.
 - **parse** — the task parser only eats a word when it is certain: `monitor`
   stays a word rather than becoming a Monday deadline, and `Ship it!` is not a
   priority flag.

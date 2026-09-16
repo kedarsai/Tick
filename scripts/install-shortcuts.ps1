@@ -1,14 +1,9 @@
 <#
-  Creates the Tick shortcuts.
+  Creates the Tick shortcuts: Start Menu and Desktop launchers, plus the
+  AutoHotkey bridge that makes Ctrl+Alt+Space reach quick capture.
 
-  The important one is the Start Menu shortcut: it carries a Windows shortcut
-  key (Ctrl+Alt+4), which Explorer registers system-wide. That is what makes
-  the hotkey work even when Tick is not running - pressing it launches Tick,
-  and if Tick is already running the single-instance lock turns the launch into
-  a show/hide toggle.
-
-  The app itself deliberately does NOT register Ctrl+Alt+4. If it did, quitting
-  Tick would unregister the hotkey and Explorer would not reliably take it back.
+  The shortcuts carry no shortcut key. Tick holds two hotkeys itself and no
+  more: Ctrl+Alt+X grabs a region, Ctrl+Alt+C saves the whole screen.
 
     powershell -ExecutionPolicy Bypass -File scripts\install-shortcuts.ps1
     powershell -ExecutionPolicy Bypass -File scripts\install-shortcuts.ps1 -Remove
@@ -16,8 +11,7 @@
 param(
   [switch]$Remove,
   [switch]$NoStartup,
-  [switch]$NoDesktop,
-  [string]$Hotkey = 'CTRL+ALT+4'
+  [switch]$NoDesktop
 )
 
 $ErrorActionPreference = 'Stop'
@@ -55,7 +49,7 @@ if (-not (Test-Path $electron)) {
 }
 
 function New-TickShortcut {
-  param([string]$Path, [string]$Args, [string]$Key)
+  param([string]$Path, [string]$Args)
   $shell = New-Object -ComObject WScript.Shell
   $sc = $shell.CreateShortcut($Path)
   $sc.TargetPath       = $electron
@@ -64,14 +58,12 @@ function New-TickShortcut {
   $sc.Description      = 'Tick - cartoon pomodoro desk pet'
   if (Test-Path $icon) { $sc.IconLocation = $icon }
   $sc.WindowStyle      = 7                      # minimized: no console flash
-  if ($Key) { $sc.Hotkey = $Key }
   $sc.Save()
-  Write-Host ("created {0}{1}" -f $Path, $(if ($Key) { "  [$Key]" } else { '' }))
+  Write-Host ("created {0}" -f $Path)
 }
 
-# The hotkey lives here. Explorer only honours shortcut keys for .lnk files in
-# the Start Menu or on the Desktop, so this one must stay put.
-New-TickShortcut -Path $programs -Key $Hotkey
+# Tick's dock button also opens this one, so the Start Menu shortcut stays.
+New-TickShortcut -Path $programs
 
 # Auto-start is owned by the app itself now (Settings > Start with Windows),
 # so a Startup shortcut here would just launch a second copy at login.
@@ -86,12 +78,16 @@ if (-not $NoDesktop) { New-TickShortcut -Path $desktopLnk }
 # Ctrl+Alt+Space off an app that already holds it. A low-level keyboard hook
 # can - it sees the keystroke before Windows dispatches hotkeys at all. That is
 # what the AutoHotkey script does: it swallows Ctrl+Alt+Space and forwards to
-# Ctrl+Alt+C, which Tick always holds.
+# Ctrl+Alt+Q, which Tick always holds.
 # ---------------------------------------------------------------------------
 $runKey   = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $bridgeNm = 'TickCaptureBridge'
 $bridgeAhk = Join-Path $root 'scripts\capture-hotkey.ahk'
+# v2 lands in a different folder depending on how it was installed, so look
+# everywhere it is known to be - one missing path silently costs you the bridge.
 $ahkExe = @(
+  "$env:LOCALAPPDATA\Programs\AutoHotkey\v2\AutoHotkey64.exe",
+  "$env:ProgramFiles\AutoHotkey\v2\AutoHotkey64.exe",
   "$env:LOCALAPPDATA\Programs\AutoHotkey2\AutoHotkey64.exe",
   "$env:ProgramFiles\AutoHotkey2\AutoHotkey64.exe"
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
@@ -107,8 +103,7 @@ if ($ahkExe) {
 
 Write-Host ""
 Write-Host "Ctrl+Alt+Space  quick capture (via the AutoHotkey bridge)"
-Write-Host "$Hotkey  opens Tick (or toggles the desk if it is already running)"
-Write-Host "Ctrl+Alt+5   show / hide the pet      (only while Tick runs)"
-Write-Host "Ctrl+Alt+6   start, pause or resume   (only while Tick runs)"
+Write-Host "Ctrl+Alt+X      grab a region of the screen   (only while Tick runs)"
+Write-Host "Ctrl+Alt+C      save the whole screen         (only while Tick runs)"
 Write-Host ""
 Write-Host "Undo with: powershell -ExecutionPolicy Bypass -File scripts\install-shortcuts.ps1 -Remove"

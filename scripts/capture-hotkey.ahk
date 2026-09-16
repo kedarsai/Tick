@@ -10,9 +10,10 @@
 ; before Windows dispatches hotkeys at all.
 ;
 ; The "$" prefix forces AutoHotkey to use that hook. We swallow the key and
-; forward to Ctrl+Alt+C, which Tick always holds as a fixed second door.
+; forward to Ctrl+Alt+Q, which Tick always holds as a fixed second door.
+; (It used to be Ctrl+Alt+C; that key now saves the whole screen.)
 ; ---------------------------------------------------------------------------
 
 $^!Space:: {
-    Send("^!c")
+    Send("^!q")
 }

@@ -86,14 +86,42 @@
         <label class="toggle"><input type="checkbox" id="setAutoStart" /> <span>Start with Windows</span></label>
       </div>
 
+      <!-- ------------------------------------------------ projects & tags -->
+      <section class="catalog" id="catalogPanel">
+        <div class="catalog__col">
+          <div class="catalog__head">
+            <span class="stamp">Projects</span>
+            <span class="hint">what a task belongs to</span>
+          </div>
+          <div class="catRows" id="projectRows"></div>
+          <div class="catalog__add">
+            <input id="newProjectName" class="input grow" type="text" maxlength="60"
+                   spellcheck="false" placeholder="New project" />
+            <input id="newProjectIdentity" class="input catRow__id" type="text" maxlength="30"
+                   spellcheck="false" placeholder="ID" title="Identity number (optional)" />
+            <button class="btn btn--primary small" id="addProject">Add</button>
+          </div>
+        </div>
+
+        <div class="catalog__col">
+          <div class="catalog__head">
+            <span class="stamp">Tags</span>
+            <span class="hint">typing #something on a task adds it here too</span>
+          </div>
+          <div class="catRows" id="tagRows"></div>
+          <div class="catalog__add">
+            <input id="newTagName" class="input grow" type="text" maxlength="40"
+                   spellcheck="false" placeholder="New tag" />
+            <button class="btn btn--primary small" id="addTag">Add</button>
+          </div>
+        </div>
+      </section>
+
       <div class="keys">
         <div class="stamp">Shortcuts</div>
         <div><b id="keyCapture">Ctrl+Alt+Space</b> quick capture, from anywhere</div>
         <div><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>X</kbd> grab a screen region straight to the inbox</div>
-        <div><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>3</kbd> show / hide the dock</div>
-        <div><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>4</kbd> open / hide this desk</div>
-        <div><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>5</kbd> show / hide the pet</div>
-        <div><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>6</kbd> start, pause or resume</div>
+        <div><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>C</kbd> save the whole screen to the inbox</div>
       </div>
 
       <div class="drawer__foot">
@@ -107,7 +135,9 @@
   <script src="../shared/characters.js"></script>
   <script src="../shared/apps.js"></script>
   <script src="../shared/parse.js"></script>
+  <script src="../shared/catalog.js"></script>
   <script src="shell.js"></script>
+  <script src="catalog-panel.js"></script>
   <script src="viewer.js"></script>
   <script src="apps/inbox.js"></script>
   <script src="apps/today.js"></script>

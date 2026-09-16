@@ -13,28 +13,27 @@ const { Store } = require('./store');
 const { Timer, MODES } = require('./timer');
 const W = require('./windows');
 const launchers = require('./launchers');
+const Shots = require('./shots');
 
 const ASSETS = path.join(__dirname, '..', '..', 'assets');
-// Ctrl+Alt+4 is deliberately NOT registered here. It lives on the Start Menu
-// shortcut so it works even when Tick is not running; pressing it launches a
-// second instance, which the single-instance lock turns into a toggle below.
-const HOTKEY_WIDGET = 'Control+Alt+5';
-const HOTKEY_TOGGLE = 'Control+Alt+6';
-const HOTKEY_BAR = 'Control+Alt+3';
-const HOTKEY_REGION = 'Control+Alt+X';
+// Two keys for pictures, and that is the lot. The desk, the dock and the pet
+// are all a click away in the tray or on the dock, so they hold no key: every
+// hotkey taken is one taken from every other app on the machine.
+const HOTKEY_REGION = 'Control+Alt+X';      // drag a rectangle
+const HOTKEY_SCREEN = 'Control+Alt+C';      // the whole screen, no questions
 // Capture wants Ctrl+Alt+Space, but a global hotkey belongs to whoever
 // registered it first and Windows will not let us take it off a running app.
 // So: ask for the preferred one, settle for the best free alternative, and keep
 // checking - the moment the preferred key is released, we upgrade to it.
 const CAPTURE_PREFERRED = 'Control+Alt+Space';
 const CAPTURE_FALLBACKS = [
-  'Control+Alt+C', 'Control+Alt+Q', 'Control+Alt+W',
-  'Control+Alt+N', 'Control+Alt+7', 'Control+Shift+Space'
+  'Control+Alt+W', 'Control+Alt+N', 'Control+Alt+7', 'Control+Shift+Space'
 ];
 // Always held, whatever else we manage to claim. The AutoHotkey bridge
 // (scripts/capture-hotkey.ahk) hooks Ctrl+Alt+Space and forwards to this, so it
-// has to be a fixed address that never moves.
-const CAPTURE_BRIDGE = 'Control+Alt+C';
+// has to be a fixed address that never moves. It used to be Ctrl+Alt+C, which
+// now belongs to full-screen capture.
+const CAPTURE_BRIDGE = 'Control+Alt+Q';
 
 // One instance only. A second launch behaves like pressing the hotkey, which
 // makes a desktop shortcut a perfectly good way to summon the app.
@@ -553,25 +552,16 @@ function pickRegion(display, image) {
   });
 }
 
-function saveShot(image, rect, display) {
+/** Write a picture and its thumbnail, and describe them for the renderer. */
+function writeShot(image) {
   const size = image.getSize();
-  const sx = size.width / display.bounds.width;
-  const sy = size.height / display.bounds.height;
-  const crop = {
-    x: Math.max(0, Math.round(rect.x * sx)),
-    y: Math.max(0, Math.round(rect.y * sy)),
-    width: Math.max(1, Math.round(rect.width * sx)),
-    height: Math.max(1, Math.round(rect.height * sy))
-  };
-  const cropped = image.crop(crop);
-
   const dir = SHOTS_DIR();
   fs.mkdirSync(dir, { recursive: true });
   const id = crypto.randomUUID();
   const full = path.join(dir, `${id}.png`);
   const thumb = path.join(dir, `${id}-thumb.png`);
-  fs.writeFileSync(full, cropped.toPNG());
-  fs.writeFileSync(thumb, cropped.resize({ width: Math.min(420, crop.width) }).toPNG());
+  fs.writeFileSync(full, image.toPNG());
+  fs.writeFileSync(thumb, image.resize({ width: Math.min(420, size.width) }).toPNG());
 
   return {
     id,
@@ -579,9 +569,16 @@ function saveShot(image, rect, display) {
     thumbPath: thumb,
     url: pathToFileURL(full).href,
     thumbUrl: pathToFileURL(thumb).href,
-    width: crop.width,
-    height: crop.height
+    width: size.width,
+    height: size.height
   };
+}
+
+/** Save what was grabbed. `rect` is in screen units; null means the lot. */
+function saveShot(image, rect, display) {
+  if (!rect) return writeShot(image);
+  const crop = Shots.cropRect(rect, display.bounds, image.getSize());
+  return writeShot(image.crop(crop || { x: 0, y: 0, ...image.getSize() }));
 }
 
 /** Hide our own floating furniture so it never ends up in your screenshot. */
@@ -612,6 +609,18 @@ async function captureRegion() {
   });
 }
 
+/** The whole screen under the cursor, with nothing to pick and nothing to ask. */
+async function captureScreen() {
+  const point = screen.getCursorScreenPoint();
+  const display = screen.getDisplayNearestPoint(point);
+
+  return withOurWindowsHidden(async () => {
+    await new Promise((r) => setTimeout(r, 220));   // let the windows actually go
+    const image = await grabDisplay(display);
+    return image ? saveShot(image, null, display) : null;
+  });
+}
+
 /** A region grabbed on its own goes straight to the inbox, no typing. */
 async function regionToInbox() {
   const shot = await captureRegion();
@@ -619,6 +628,55 @@ async function regionToInbox() {
   const created = store.add('inbox', { text: '', shot, source: 'region', triaged: false });
   pushData();
   return created;
+}
+
+/** Ctrl+Alt+C: the screen, saved, with a word to say it happened. */
+async function screenToInbox() {
+  let shot = null;
+  try {
+    shot = await captureScreen();
+  } catch (err) {
+    console.error('[shot] screen capture failed:', err.message);
+  }
+  if (!shot) return null;
+  const created = store.add('inbox', { text: '', shot, source: 'screen', triaged: false });
+  pushData();
+  if (Notification.isSupported()) {
+    new Notification({
+      title: 'Screen saved',
+      body: 'It is in the inbox, waiting to be sorted.',
+      icon: path.join(ASSETS, 'icon-256.png'),
+      silent: true
+    }).show();
+  }
+  return created;
+}
+
+/**
+ * Crop a picture we already saved. The cropped copy is written as new files
+ * and the old ones are left alone, so undo is just "keep the old record" and
+ * nothing has to fight the image cache.
+ */
+function cropShot(shot, rect) {
+  const target = path.resolve(String((shot && shot.path) || ''));
+  if (!target.startsWith(path.resolve(SHOTS_DIR()))) return null;
+  const image = nativeImage.createFromPath(target);
+  if (image.isEmpty()) return null;
+  const crop = Shots.cropRect(rect, image.getSize(), image.getSize());
+  if (!crop) return null;
+  return writeShot(image.crop(crop));
+}
+
+/** Delete a picture we saved - the copy that lost, after a crop or an undo. */
+function discardShot(shot) {
+  const dir = path.resolve(SHOTS_DIR());
+  for (const file of [shot && shot.path, shot && shot.thumbPath]) {
+    if (!file) continue;
+    const target = path.resolve(String(file));
+    if (!target.startsWith(dir)) continue;
+    try { fs.rmSync(target, { force: true }); } catch (_) { /* already gone */ }
+  }
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -670,13 +728,14 @@ function refreshTray() {
     { type: 'separator' },
     { label: `Quick capture (${prettyKey(captureHotkey)})`, click: () => showCapture() },
     { label: 'Grab a screen region (Ctrl+Alt+X)', click: () => regionToInbox() },
-    { label: 'Open the desk (Ctrl+Alt+4)', click: () => openAppView() },
+    { label: 'Save the whole screen (Ctrl+Alt+C)', click: () => screenToInbox() },
+    { label: 'Open the desk', click: () => openAppView() },
     {
-      label: barWin && barWin.isVisible() ? 'Hide the dock (Ctrl+Alt+3)' : 'Show the dock (Ctrl+Alt+3)',
+      label: barWin && barWin.isVisible() ? 'Hide the dock' : 'Show the dock',
       click: () => toggleBar()
     },
     {
-      label: widgetHidden ? 'Show widget (Ctrl+Alt+5)' : 'Hide widget (Ctrl+Alt+5)',
+      label: widgetHidden ? 'Show widget' : 'Hide widget',
       click: () => (widgetHidden ? showWidget() : hideWidget())
     },
     {
@@ -850,6 +909,24 @@ function wireIpc() {
     return true;
   });
 
+  // Renaming or deleting a tag, or deleting a project, touches records all over
+  // the file, so it happens in the store rather than a renderer loop.
+  ipcMain.handle('catalog:rename-tag', (_e, { from, to } = {}) => {
+    const ok = store.renameTag(from, to);
+    if (ok) pushData();
+    return ok;
+  });
+  ipcMain.handle('catalog:delete-tag', (_e, name) => {
+    const ok = store.deleteTag(name);
+    if (ok) pushData();
+    return ok;
+  });
+  ipcMain.handle('catalog:delete-project', (_e, id) => {
+    const ok = store.deleteProject(id);
+    if (ok) pushData();
+    return ok;
+  });
+
   ipcMain.handle('capture:save', (_e, payload = {}) => {
     const text = String(payload.text || '').trim();
     if (!text && !payload.shot) return null;
@@ -876,6 +953,10 @@ function wireIpc() {
       return null;
     }
   });
+
+  ipcMain.handle('shot:screen', () => screenToInbox());
+  ipcMain.handle('shot:crop', (_e, { shot, rect } = {}) => cropShot(shot, rect));
+  ipcMain.handle('shot:discard', (_e, shot) => discardShot(shot));
 
   ipcMain.handle('app:copy-image', (_e, filePath) => {
     const target = path.resolve(String(filePath || ''));
@@ -1021,17 +1102,9 @@ app.whenReady().then(() => {
   }
 
   const shortcuts = {
-    'show widget': globalShortcut.register(HOTKEY_WIDGET, () => {
-      if (!widgetWin || !widgetWin.isVisible()) { showWidget(); return; }
-      if (store.settings.docked) undockWidget(); else hideWidget();
-    }),
-    'suite dock': globalShortcut.register(HOTKEY_BAR, () => toggleBar()),
     'quick capture': !!claimCaptureHotkey(),
     'grab a region': globalShortcut.register(HOTKEY_REGION, () => regionToInbox()),
-    'play/pause': globalShortcut.register(HOTKEY_TOGGLE, () => {
-      timer.toggle();
-      if (widgetWin && !widgetWin.isVisible()) showWidget();
-    })
+    'grab the screen': globalShortcut.register(HOTKEY_SCREEN, () => screenToInbox())
   };
   for (const [name, ok] of Object.entries(shortcuts)) {
     if (!ok) console.warn(`[hotkey] could not register "${name}" - another app may already own it`);

@@ -8,10 +8,15 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const { Store, DEFAULTS } = require('../src/main/store');
+const { Store, DEFAULTS, tagName } = require('../src/main/store');
 
 function tmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'tick-store-'));
+}
+
+/** A data file as an older version would have written it. */
+function writeLegacy(dir, data) {
+  fs.writeFileSync(path.join(dir, 'tick-data.json'), JSON.stringify(data), 'utf8');
 }
 
 test('a missing file starts from defaults', () => {
@@ -74,6 +79,105 @@ test('missing keys are backfilled from defaults', () => {
   assert.equal(store.settings.focusMinutes, 50, 'existing value wins');
   assert.equal(store.settings.longBreakEvery, DEFAULTS.settings.longBreakEvery, 'new key filled in');
   assert.equal(store.meta.pomodoroCount, 0);
+});
+
+// ---------------------------------------------------------- projects & tags
+
+test('a task starts unassigned, with room for an identity number', () => {
+  const store = new Store(tmpDir());
+  const task = store.add('tasks', { title: 'Fix recon mismatch' });
+  assert.equal(task.projectId, null);
+  assert.equal(task.identity, '');
+
+  const project = store.add('projects', { name: 'Data Migration', identity: 'DM-100' });
+  const filed = store.add('tasks', { title: 'Ship it', projectId: project.id, identity: 'DM-142' });
+  assert.equal(filed.projectId, project.id, 'a given project is not overwritten by the default');
+  assert.equal(filed.identity, 'DM-142');
+});
+
+test('writing a task or note adopts its tags into the catalogue', () => {
+  const store = new Store(tmpDir());
+  store.add('tasks', { title: 'Ship it', tags: ['urgent', 'backend'] });
+  store.add('notes', { title: 'Idea', tags: ['backend', 'reading'] });
+  assert.deepEqual(store.list('tags').map((t) => t.name).sort(), ['backend', 'reading', 'urgent']);
+
+  const task = store.add('tasks', { title: 'Later' });
+  store.update('tasks', task.id, { tags: ['#Urgent', 'new-one'] });
+  assert.deepEqual(store.list('tags').map((t) => t.name).sort(),
+    ['backend', 'new-one', 'reading', 'urgent'], '#Urgent is the tag urgent, not a second one');
+
+  assert.ok(store.list('tags').every((t) => /^#[0-9a-f]{6}$/i.test(t.accent)), 'every tag gets a colour');
+});
+
+test('tags already on records are adopted when an older file is opened', () => {
+  const dir = tmpDir();
+  writeLegacy(dir, {
+    version: 3,
+    tasks: [{ id: 't1', title: 'Old task', tags: ['work', 'urgent'] }],
+    notes: [{ id: 'n1', title: 'Old note', tags: ['urgent', 'reading'] }],
+    settings: {}
+  });
+
+  const store = new Store(dir);
+  assert.deepEqual(store.list('tags').map((t) => t.name).sort(), ['reading', 'urgent', 'work']);
+  assert.equal(store.data.version, DEFAULTS.version);
+  store.save({ immediate: true });
+
+  // Opening it again must not seed a second time.
+  const again = new Store(dir);
+  assert.equal(again.list('tags').length, 3);
+});
+
+test('renaming a tag rewrites every task and note that used it', () => {
+  const store = new Store(tmpDir());
+  const task = store.add('tasks', { title: 'Ship it', tags: ['wrk', 'urgent'] });
+  const note = store.add('notes', { title: 'Idea', tags: ['wrk'] });
+
+  assert.equal(store.renameTag('wrk', 'work'), true);
+  assert.deepEqual(store.list('tasks').find((t) => t.id === task.id).tags, ['work', 'urgent']);
+  assert.deepEqual(store.list('notes').find((n) => n.id === note.id).tags, ['work']);
+  assert.deepEqual(store.list('tags').map((t) => t.name).sort(), ['urgent', 'work']);
+
+  assert.equal(store.renameTag('nope', 'something'), false, 'an unknown tag cannot be renamed');
+});
+
+test('renaming a tag onto an existing one merges them', () => {
+  const store = new Store(tmpDir());
+  const task = store.add('tasks', { title: 'Ship it', tags: ['wrk', 'work'] });
+
+  assert.equal(store.renameTag('wrk', 'work'), true);
+  assert.deepEqual(store.list('tasks').find((t) => t.id === task.id).tags, ['work'], 'no duplicate left behind');
+  assert.deepEqual(store.list('tags').map((t) => t.name), ['work']);
+});
+
+test('deleting a tag strips it from everything that used it', () => {
+  const store = new Store(tmpDir());
+  const task = store.add('tasks', { title: 'Ship it', tags: ['work', 'urgent'] });
+
+  assert.equal(store.deleteTag('urgent'), true);
+  assert.deepEqual(store.list('tasks').find((t) => t.id === task.id).tags, ['work']);
+  assert.deepEqual(store.list('tags').map((t) => t.name), ['work']);
+  assert.equal(store.deleteTag('urgent'), false, 'deleting it twice is not a change');
+});
+
+test('deleting a project keeps its tasks and unassigns them', () => {
+  const store = new Store(tmpDir());
+  const project = store.add('projects', { name: 'Data Migration', identity: 'DM-100' });
+  const task = store.add('tasks', { title: 'Fix recon', projectId: project.id });
+
+  assert.equal(store.deleteProject(project.id), true);
+  assert.equal(store.list('projects').length, 0);
+  assert.equal(store.list('tasks').length, 1, 'the task itself survives');
+  assert.equal(store.list('tasks')[0].projectId, null);
+  assert.equal(task.identity, '');
+  assert.equal(store.deleteProject('nope'), false);
+});
+
+test('tagName reads the many ways a tag gets typed', () => {
+  assert.equal(tagName('  #Work '), 'work');
+  assert.equal(tagName('##double'), 'double');
+  assert.equal(tagName(''), '');
+  assert.equal(tagName(null), '');
 });
 
 test('deleting and updating entries works by id', () => {

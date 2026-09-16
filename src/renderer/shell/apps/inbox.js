@@ -174,6 +174,7 @@ Shell.register('inbox', (view, UI) => {
       text: item.text,
       placeholder: 'What is this picture for?',
       onText: (value) => DB.update('inbox', item.id, { text: value }),
+      onShot: (shot) => DB.update('inbox', item.id, { shot }),
       meta: [
         { label: 'Captured', value: `${Fmt.dayLabel(Fmt.dayKey(item.createdAt))} ${Fmt.timeOfDay(item.createdAt)}` },
         { label: 'Size', value: `${item.shot.width} x ${item.shot.height}` },

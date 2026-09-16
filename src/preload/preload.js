@@ -58,11 +58,23 @@ contextBridge.exposeInMainWorld('tick', {
     update: (collection, id, patch) => invoke('data:update', { collection, id, patch }),
     remove: (collection, id) => invoke('data:remove', { collection, id })
   },
+  // Projects and tags: the edits that reach beyond one record.
+  catalog: {
+    renameTag: (from, to) => invoke('catalog:rename-tag', { from, to }),
+    deleteTag: (name) => invoke('catalog:delete-tag', name),
+    deleteProject: (id) => invoke('catalog:delete-project', id)
+  },
   capture: {
     save: (payload) => invoke('capture:save', payload),
     close: () => invoke('capture:close'),
     hotkey: () => invoke('capture:hotkey'),
-    region: () => invoke('shot:region')
+    region: () => invoke('shot:region'),
+    screen: () => invoke('shot:screen')
+  },
+  // Pictures we already saved: crop one, or throw away the copy that lost.
+  shots: {
+    crop: (shot, rect) => invoke('shot:crop', { shot, rect }),
+    discard: (shot) => invoke('shot:discard', shot)
   },
   bar: {
     toggle: () => invoke('bar:toggle'),
